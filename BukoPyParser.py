@@ -263,10 +263,10 @@ class Parser:
         if res.error:
             return res
 
-        if not self.current_tok.matches(T_KEYWORD, 'then'):
+        if not self.current_tok.matches(T_KEYWORD, ':'):
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                f"Expected 'then'"
+                f"Expected ':'"
             ))
 
         res.register_advancement()
@@ -285,10 +285,10 @@ class Parser:
             if res.error:
                 return res
 
-            if not self.current_tok.matches(T_KEYWORD, 'then'):
+            if not self.current_tok.matches(T_KEYWORD, ':'):
                 return res.failure(InvalidSyntaxError(
                     self.current_tok.pos_start, self.current_tok.pos_end,
-                    f"Expected 'then'"
+                    f"Expected ':'"
                 ))
 
             res.register_advancement()
@@ -367,10 +367,10 @@ class Parser:
         else:
             step_value = None
 
-        if not self.current_tok.matches(T_KEYWORD, 'then'):
+        if not self.current_tok.matches(T_KEYWORD, ':'):
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                f"Expected 'then'"
+                f"Expected ':'"
             ))
 
         res.register_advancement()
@@ -398,10 +398,10 @@ class Parser:
         if res.error:
             return res
 
-        if not self.current_tok.matches(T_KEYWORD, 'then'):
+        if not self.current_tok.matches(T_KEYWORD, ':'):
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                f"Expected 'then'"
+                f"Expected ':'"
             ))
 
         res.register_advancement()

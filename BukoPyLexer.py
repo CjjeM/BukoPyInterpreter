@@ -36,6 +36,7 @@ T_GTE = 'GTE'
 T_COMMA = 'COMMA'
 T_ARROW = 'ARROW'
 T_EOF = 'EOF'
+T_COLON = ':'
 
 KEYWORDS = [
     'var',
@@ -49,7 +50,7 @@ KEYWORDS = [
     'to',
     'step',
     'while',
-    'then'
+    ':'
 ]
 
 
@@ -103,6 +104,9 @@ class Lexer:
                 tokens.append(self.make_identifier())
             elif self.current_char == '"':
                 tokens.append(self.make_string())
+            elif self.current_char == ':':
+                tokens.append(Token(T_KEYWORD, T_COLON, pos_start=self.pos, pos_end=self.pos.copy()))
+                self.advance()
             elif self.current_char == '+':
                 tokens.append(Token(T_PLUS, pos_start=self.pos))
                 self.advance()
