@@ -1,5 +1,4 @@
 from BukoPyParser import *
-from BukoPySymbolTable import *
 
 
 #######################################
@@ -85,7 +84,7 @@ class Value:
         return None, self.illegal_operation(other)
 
     def execute(self, args):
-        return RTResult().failure(self.illegal_operation())
+        return RTResult().failure(self.illegal_operation(args))
 
     def copy(self):
         raise Exception('No copy method defined')
@@ -97,9 +96,9 @@ class Value:
         if not other:
             other = self
         return RTError(
-            self.pos_start, other.pos_end,
-            'Illegal operation',
-            self.context
+          self.pos_start, other.pos_end,
+          'Illegal operation',
+          self.context
         )
 
 
@@ -205,8 +204,16 @@ class Number(Value):
     def is_true(self):
         return self.value != 0
 
+    def __str__(self):
+        return str(self.value)
+
     def __repr__(self):
         return str(self.value)
+
+
+Number.null = Number(0)
+Number.false = Number(0)
+Number.true = Number(1)
 
 
 class String(Value):
@@ -216,15 +223,15 @@ class String(Value):
 
     def added_to(self, other):
         if isinstance(other, String):
-            return String(self.value + other.value).set_context(self.context), None
+          return String(self.value + other.value).set_context(self.context), None
         else:
-            return None, Value.illegal_operation(self, other)
+          return None, Value.illegal_operation(self, other)
 
     def multed_by(self, other):
         if isinstance(other, Number):
-            return String(self.value * other.value).set_context(self.context), None
+          return String(self.value * other.value).set_context(self.context), None
         else:
-            return None, Value.illegal_operation(self, other)
+          return None, Value.illegal_operation(self, other)
 
     def is_true(self):
         return len(self.value) > 0
@@ -235,8 +242,70 @@ class String(Value):
         copy.set_context(self.context)
         return copy
 
+    def __str__(self):
+        return self.value
+
     def __repr__(self):
         return f'"{self.value}"'
+
+
+class List(Value):
+    def __init__(self, elements):
+        super().__init__()
+        self.elements = elements
+
+    def added_to(self, other):
+        new_list = self.copy()
+        new_list.elements.append(other)
+        return new_list, None
+
+    def subbed_by(self, other):
+        if isinstance(other, Number):
+            new_list = self.copy()
+            try:
+                new_list.elements.pop(other.value)
+                return new_list, None
+            except:
+                return None, RTError(
+                    other.pos_start, other.pos_end,
+                    'Element at this index could not be removed from list because index is out of bounds',
+                    self.context
+                )
+        else:
+            return None, Value.illegal_operation(self, other)
+
+    def multed_by(self, other):
+        if isinstance(other, List):
+            new_list = self.copy()
+            new_list.elements.extend(other.elements)
+            return new_list, None
+        else:
+            return None, Value.illegal_operation(self, other)
+
+    def dived_by(self, other):
+        if isinstance(other, Number):
+            try:
+                return self.elements[other.value], None
+            except:
+                return None, RTError(
+                    other.pos_start, other.pos_end,
+                    'Element at this index could not be retrieved from list because index is out of bounds',
+                    self.context
+                )
+        else:
+            return None, Value.illegal_operation(self, other)
+
+    def copy(self):
+        copy = List(self.elements)
+        copy.set_pos(self.pos_start, self.pos_end)
+        copy.set_context(self.context)
+        return copy
+
+    def __str__(self):
+        return ", ".join([str(x) for x in self.elements])
+
+    def __repr__(self):
+        return f'[{", ".join([repr(x) for x in self.elements])}]'
 
 
 #######################################
@@ -250,10 +319,10 @@ class Context:
         self.parent_entry_pos = parent_entry_pos
         self.symbol_table = None
 
-
 #######################################
 # SYMBOL TABLE
 #######################################
+
 
 class SymbolTable:
     def __init__(self, parent=None):
@@ -296,6 +365,18 @@ class Interpreter:
             String(node.tok.value).set_context(context).set_pos(node.pos_start, node.pos_end)
         )
 
+    def visit_ListNode(self, node, context):
+        res = RTResult()
+        elements = []
+
+        for element_node in node.element_nodes:
+            elements.append(res.register(self.visit(element_node, context)))
+            if res.error: return res
+
+        return res.success(
+            List(elements).set_context(context).set_pos(node.pos_start, node.pos_end)
+        )
+
     def visit_VarAccessNode(self, node, context):
         res = RTResult()
         var_name = node.var_name_tok.value
@@ -308,7 +389,7 @@ class Interpreter:
                 context
             ))
 
-        value = value.copy().set_pos(node.pos_start, node.pos_end)
+        value = value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
         return res.success(value)
 
     def visit_VarAssignNode(self, node, context):
@@ -383,7 +464,7 @@ class Interpreter:
     def visit_IfNode(self, node, context):
         res = RTResult()
 
-        for condition, expr in node.cases:
+        for condition, expr, should_return_null in node.cases:
             condition_value = res.register(self.visit(condition, context))
             if res.error:
                 return res
@@ -392,18 +473,20 @@ class Interpreter:
                 expr_value = res.register(self.visit(expr, context))
                 if res.error:
                     return res
-                return res.success(expr_value)
+                return res.success(Number.null if should_return_null else expr_value)
 
         if node.else_case:
-            else_value = res.register(self.visit(node.else_case, context))
+            expr, should_return_null = node.else_case
+            expr_value = res.register(self.visit(expr, context))
             if res.error:
                 return res
-            return res.success(else_value)
+            return res.success(Number.null if should_return_null else expr_value)
 
-        return res.success(None)
+        return res.success(Number.null)
 
     def visit_ForNode(self, node, context):
         res = RTResult()
+        elements = []
 
         start_value = res.register(self.visit(node.start_value_node, context))
         if res.error:
@@ -431,36 +514,41 @@ class Interpreter:
             context.symbol_table.set(node.var_name_tok.value, Number(i))
             i += step_value.value
 
-            res.register(self.visit(node.body_node, context))
+            elements.append(res.register(self.visit(node.body_node, context)))
             if res.error:
                 return res
 
-        return res.success(None)
+        return res.success(
+            Number.null if node.should_return_null else
+            List(elements).set_context(context).set_pos(node.pos_start, node.pos_end)
+        )
 
     def visit_WhileNode(self, node, context):
         res = RTResult()
+        elements = []
 
         while True:
             condition = res.register(self.visit(node.condition_node, context))
             if res.error:
                 return res
 
-            if not condition.is_true():
-                break
+            if not condition.is_true(): break
 
-            res.register(self.visit(node.body_node, context))
+            elements.append(res.register(self.visit(node.body_node, context)))
             if res.error:
                 return res
 
-        return res.success(None)
+        return res.success(
+            Number.null if node.should_return_null else
+            List(elements).set_context(context).set_pos(node.pos_start, node.pos_end)
+        )
 
     def visit_CallNode(self, node, context):
         res = RTResult()
         args = []
 
         value_to_call = res.register(self.visit(node.node_to_call, context))
-        if res.error:
-            return res
+        if res.error: return res
         value_to_call = value_to_call.copy().set_pos(node.pos_start, node.pos_end)
 
         for arg_node in node.arg_nodes:
@@ -471,4 +559,6 @@ class Interpreter:
         return_value = res.register(value_to_call.execute(args))
         if res.error:
             return res
+        return_value = return_value.copy().set_pos(node.pos_start, node.pos_end).set_context(context)
         return res.success(return_value)
+

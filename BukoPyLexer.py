@@ -37,6 +37,7 @@ T_COMMA = 'COMMA'
 T_ARROW = 'ARROW'
 T_EOF = 'EOF'
 T_COLON = ':'
+T_NEWLINE = 'NEWLINE'
 
 KEYWORDS = [
     'var',
@@ -50,7 +51,8 @@ KEYWORDS = [
     'to',
     'step',
     'while',
-    ':'
+    ':',
+    'END'
 ]
 
 
@@ -97,6 +99,9 @@ class Lexer:
 
         while self.current_char is not None:
             if self.current_char in ' \t':
+                self.advance()
+            elif self.current_char in ';\n':
+                tokens.append(Token(T_NEWLINE, pos_start=self.pos))
                 self.advance()
             elif self.current_char in DIGITS:
                 tokens.append(self.make_number())
