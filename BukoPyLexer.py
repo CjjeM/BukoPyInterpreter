@@ -38,18 +38,18 @@ T_ARROW = 'ARROW'
 T_EOF = 'EOF'
 
 KEYWORDS = [
-    'VAR',
-    'AND',
-    'OR',
-    'NOT',
-    'IF',
-    'ELIF',
-    'ELSE',
-    'FOR',
-    'TO',
-    'STEP',
-    'WHILE',
-    'THEN'
+    'var',
+    'and',
+    'or',
+    'not',
+    'if',
+    'elif',
+    'else',
+    'for',
+    'to',
+    'step',
+    'while',
+    'then'
 ]
 
 

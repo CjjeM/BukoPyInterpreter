@@ -17,6 +17,10 @@ class ParseResult:
         self.last_registered_advance_count = 1
         self.advance_count += 1
 
+    def register_goback(self):
+        self.last_registered_advance_count = 1
+        self.advance_count -= 1
+
     def register(self, res):
         self.last_registered_advance_count = res.advance_count
         self.advance_count += res.advance_count
@@ -50,12 +54,18 @@ class Parser:
             self.current_tok = self.tokens[self.tok_idx]
         return self.current_tok
 
+    def goback(self):
+        self.tok_idx -= 1
+        if self.tok_idx < len(self.tokens):
+            self.current_tok = self.tokens[self.tok_idx]
+        return self.current_tok
+
     def parse(self):
         res = self.expr()
         if not res.error and self.current_tok.type != T_EOF:
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                "Expected '+', '-', '*', '/', '^', '==', '!=', '<', '>', <=', '>=', 'AND' or 'OR'"
+                "Expected '+', '-', '*', '/', '^', '==', '!=', '<', '>', <=', '>=', 'and' or 'or'"
             ))
         return res
 
@@ -64,39 +74,28 @@ class Parser:
     def expr(self):
         res = ParseResult()
 
-        if self.current_tok.matches(T_KEYWORD, 'VAR'):
-            res.register_advancement()
-            self.advance()
-
-            if self.current_tok.type != T_IDENTIFIER:
-                return res.failure(InvalidSyntaxError(
-                    self.current_tok.pos_start, self.current_tok.pos_end,
-                    "Expected identifier"
-                ))
-
+        if self.current_tok.type == T_IDENTIFIER:
             var_name = self.current_tok
             res.register_advancement()
             self.advance()
 
-            if self.current_tok.type != T_EQ:
-                return res.failure(InvalidSyntaxError(
-                    self.current_tok.pos_start, self.current_tok.pos_end,
-                    "Expected '='"
-                ))
+            if self.current_tok.type == T_EQ:
+                res.register_advancement()
+                self.advance()
+                expr = res.register(self.expr())
+                if res.error:
+                    return res
+                return res.success(VarAssignNode(var_name, expr))
+            else:
+                res.register_goback()
+                self.goback()
 
-            res.register_advancement()
-            self.advance()
-            expr = res.register(self.expr())
-            if res.error:
-                return res
-            return res.success(VarAssignNode(var_name, expr))
-
-        node = res.register(self.bin_op(self.comp_expr, ((T_KEYWORD, 'AND'), (T_KEYWORD, 'OR'))))
+        node = res.register(self.bin_op(self.comp_expr, ((T_KEYWORD, 'and'), (T_KEYWORD, 'or'))))
 
         if res.error:
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                "Expected 'VAR', 'IF', 'FOR', 'WHILE', int, float, identifier, '+', '-', '(' or 'NOT'"
+                "Expected 'var', 'if', 'for', 'while', int, float, identifier, '+', '-', '(' or 'not'"
             ))
 
         return res.success(node)
@@ -104,7 +103,7 @@ class Parser:
     def comp_expr(self):
         res = ParseResult()
 
-        if self.current_tok.matches(T_KEYWORD, 'NOT'):
+        if self.current_tok.matches(T_KEYWORD, 'not'):
             op_tok = self.current_tok
             res.register_advancement()
             self.advance()
@@ -119,7 +118,7 @@ class Parser:
         if res.error:
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                "Expected int, float, identifier, '+', '-', '(' or 'NOT'"
+                "Expected int, float, identifier, '+', '-', '(' or 'not'"
             ))
 
         return res.success(node)
@@ -166,7 +165,7 @@ class Parser:
                 if res.error:
                     return res.failure(InvalidSyntaxError(
                         self.current_tok.pos_start, self.current_tok.pos_end,
-                        "Expected ')', 'VAR', 'IF', 'FOR', 'WHILE', int, float, identifier, '+', '-', '(' or 'NOT'"
+                        "Expected ')', 'var', 'if', 'for', 'while', int, float, identifier, '+', '-', '(' or 'not'"
                     ))
 
                 while self.current_tok.type == T_COMMA:
@@ -223,19 +222,19 @@ class Parser:
                     "Expected ')'"
                 ))
 
-        elif tok.matches(T_KEYWORD, 'IF'):
+        elif tok.matches(T_KEYWORD, 'if'):
             if_expr = res.register(self.if_expr())
             if res.error:
                 return res
             return res.success(if_expr)
 
-        elif tok.matches(T_KEYWORD, 'FOR'):
+        elif tok.matches(T_KEYWORD, 'for'):
             for_expr = res.register(self.for_expr())
             if res.error:
                 return res
             return res.success(for_expr)
 
-        elif tok.matches(T_KEYWORD, 'WHILE'):
+        elif tok.matches(T_KEYWORD, 'while'):
             while_expr = res.register(self.while_expr())
             if res.error:
                 return res
@@ -243,7 +242,7 @@ class Parser:
 
         return res.failure(InvalidSyntaxError(
             tok.pos_start, tok.pos_end,
-            "Expected int, float, identifier, '+', '-', '(', 'IF', 'FOR', 'WHILE'"
+            "Expected int, float, identifier, '+', '-', '(', 'if', 'for', 'while'"
         ))
 
     def if_expr(self):
@@ -251,10 +250,10 @@ class Parser:
         cases = []
         else_case = None
 
-        if not self.current_tok.matches(T_KEYWORD, 'IF'):
+        if not self.current_tok.matches(T_KEYWORD, 'if'):
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                f"Expected 'IF'"
+                f"Expected 'if'"
             ))
 
         res.register_advancement()
@@ -264,10 +263,10 @@ class Parser:
         if res.error:
             return res
 
-        if not self.current_tok.matches(T_KEYWORD, 'THEN'):
+        if not self.current_tok.matches(T_KEYWORD, 'then'):
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                f"Expected 'THEN'"
+                f"Expected 'then'"
             ))
 
         res.register_advancement()
@@ -278,7 +277,7 @@ class Parser:
             return res
         cases.append((condition, expr))
 
-        while self.current_tok.matches(T_KEYWORD, 'ELIF'):
+        while self.current_tok.matches(T_KEYWORD, 'elif'):
             res.register_advancement()
             self.advance()
 
@@ -286,10 +285,10 @@ class Parser:
             if res.error:
                 return res
 
-            if not self.current_tok.matches(T_KEYWORD, 'THEN'):
+            if not self.current_tok.matches(T_KEYWORD, 'then'):
                 return res.failure(InvalidSyntaxError(
                     self.current_tok.pos_start, self.current_tok.pos_end,
-                    f"Expected 'THEN'"
+                    f"Expected 'then'"
                 ))
 
             res.register_advancement()
@@ -300,7 +299,7 @@ class Parser:
                 return res
             cases.append((condition, expr))
 
-        if self.current_tok.matches(T_KEYWORD, 'ELSE'):
+        if self.current_tok.matches(T_KEYWORD, 'else'):
             res.register_advancement()
             self.advance()
 
@@ -313,10 +312,10 @@ class Parser:
     def for_expr(self):
         res = ParseResult()
 
-        if not self.current_tok.matches(T_KEYWORD, 'FOR'):
+        if not self.current_tok.matches(T_KEYWORD, 'for'):
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                f"Expected 'FOR'"
+                f"Expected 'for'"
             ))
 
         res.register_advancement()
@@ -345,10 +344,10 @@ class Parser:
         if res.error:
             return res
 
-        if not self.current_tok.matches(T_KEYWORD, 'TO'):
+        if not self.current_tok.matches(T_KEYWORD, 'to'):
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                f"Expected 'TO'"
+                f"Expected 'to'"
             ))
 
         res.register_advancement()
@@ -358,7 +357,7 @@ class Parser:
         if res.error:
             return res
 
-        if self.current_tok.matches(T_KEYWORD, 'STEP'):
+        if self.current_tok.matches(T_KEYWORD, 'step'):
             res.register_advancement()
             self.advance()
 
@@ -368,10 +367,10 @@ class Parser:
         else:
             step_value = None
 
-        if not self.current_tok.matches(T_KEYWORD, 'THEN'):
+        if not self.current_tok.matches(T_KEYWORD, 'then'):
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                f"Expected 'THEN'"
+                f"Expected 'then'"
             ))
 
         res.register_advancement()
@@ -386,10 +385,10 @@ class Parser:
     def while_expr(self):
         res = ParseResult()
 
-        if not self.current_tok.matches(T_KEYWORD, 'WHILE'):
+        if not self.current_tok.matches(T_KEYWORD, 'while'):
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                f"Expected 'WHILE'"
+                f"Expected 'while'"
             ))
 
         res.register_advancement()
@@ -399,10 +398,10 @@ class Parser:
         if res.error:
             return res
 
-        if not self.current_tok.matches(T_KEYWORD, 'THEN'):
+        if not self.current_tok.matches(T_KEYWORD, 'then'):
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                f"Expected 'THEN'"
+                f"Expected 'then'"
             ))
 
         res.register_advancement()
