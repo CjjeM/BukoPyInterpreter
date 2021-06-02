@@ -7,6 +7,9 @@ from BukoPySymbolTable import *
 
 global_symbol_table = SymbolTable()
 global_symbol_table.set("null", Number(0))
+global_symbol_table.set("print", BuiltInFunction("print"))
+global_symbol_table.set("False", Number(0))
+global_symbol_table.set("True", Number(1))
 
 
 def run(fn, text):

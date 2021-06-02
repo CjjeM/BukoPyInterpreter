@@ -540,7 +540,8 @@ class Parser:
             self.advance()
 
             body = res.register(self.statements())
-            if res.error: return res
+            if res.error:
+                return res
 
             if not self.current_tok.matches(T_KEYWORD, 'END'):
                 return res.failure(InvalidSyntaxError(
