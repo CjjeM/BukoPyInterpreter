@@ -2,6 +2,7 @@ from BukoPyParser import *
 from BukoPyErrorHandler import *
 from BukoPySymbolTable import *
 from BukoPyRuntimeResults import *
+from HelperModules.AST_tree_generator import *
 
 #######################################
 # VALUES
@@ -323,7 +324,8 @@ class BaseFunction(Value):
     def check_and_populate_args(self, arg_names, args, exec_ctx):
         res = RTResult()
         res.register(self.check_args(arg_names, args))
-        if res.error: return res
+        if res.error:
+            return res
         self.populate_args(arg_names, args, exec_ctx)
         return res.success(None)
 
@@ -657,6 +659,8 @@ def run(fn, text):
     interpreter = Interpreter()
     context = Context('<program>')
     context.symbol_table = global_symbol_table
+    AST().print_ast(ast)
+
     result = interpreter.visit(ast.node, context)
 
     return result.value, result.error

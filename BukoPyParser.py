@@ -125,6 +125,18 @@ class Parser:
             self.current_tok.pos_end.copy()
         ))
 
+    def statement(self):
+        res = ParseResult()
+        pos_start = self.current_tok.pos_start.copy()
+
+        expr = res.register(self.expr())
+        if res.error:
+            return res.failure(InvalidSyntaxError(
+                self.current_tok.pos_start, self.current_tok.pos_end,
+                "Expected 'if', 'for', 'while', int, float, identifier, '+', '-', '(', '[' or 'not'"
+            ))
+        return res.success(expr)
+
     def expr(self):
         res = ParseResult()
 
@@ -327,6 +339,10 @@ class Parser:
                     return res
                 else_case = (statements, True)
 
+                """ 
+                res.register_advancement()
+                self.advance()
+                """
                 if self.current_tok.matches(T_KEYWORD, 'END'):
                     res.register_advancement()
                     self.advance()
@@ -335,6 +351,8 @@ class Parser:
                         self.current_tok.pos_start, self.current_tok.pos_end,
                         "Expected 'END'"
                     ))
+
+
             else:
                 expr = res.register(self.expr())
                 if res.error:
@@ -554,22 +572,28 @@ class Parser:
 
             return res.success(WhileNode(condition, body, True))
 
-    def bin_op(self, func_a, ops, func_b=None):
-        if func_b is None:
-            func_b = func_a
-
-        res = ParseResult()
-        left = res.register(func_a())
+        body = res.register(self.statement())
         if res.error:
             return res
 
-        while self.current_tok.type in ops or (self.current_tok.type, self.current_tok.value) in ops:
-            op_tok = self.current_tok
-            res.register_advancement()
-            self.advance()
-            right = res.register(func_b())
+        return res.success(WhileNode(condition, body, False))
+
+    def bin_op(self, func_a, ops, func_b=None):
+            if func_b is None:
+                func_b = func_a
+
+            res = ParseResult()
+            left = res.register(func_a())
             if res.error:
                 return res
-            left = BinOpNode(left, op_tok, right)
 
-        return res.success(left)
+            while self.current_tok.type in ops or (self.current_tok.type, self.current_tok.value) in ops:
+                op_tok = self.current_tok
+                res.register_advancement()
+                self.advance()
+                right = res.register(func_b())
+                if res.error:
+                    return res
+                left = BinOpNode(left, op_tok, right)
+
+            return res.success(left)
