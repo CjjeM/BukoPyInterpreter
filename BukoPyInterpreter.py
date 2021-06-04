@@ -66,7 +66,7 @@ class Value:
         return None, self.illegal_operation(other)
 
     def execute(self, args):
-        return RTResult().failure(self.illegal_operation(args))
+        return RTResult().failure(self.illegal_operation())
 
     def copy(self):
         raise Exception('No copy method defined')

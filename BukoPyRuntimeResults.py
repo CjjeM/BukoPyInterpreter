@@ -1,10 +1,8 @@
-#######################################
-# RUNTIME RESULT
-#######################################
-
-
 class RTResult:
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.value = None
         self.error = None
 
@@ -13,9 +11,11 @@ class RTResult:
         return res.value
 
     def success(self, value):
+        self.reset()
         self.value = value
         return self
 
     def failure(self, error):
+        self.reset()
         self.error = error
         return self

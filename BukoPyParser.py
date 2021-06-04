@@ -94,7 +94,7 @@ class Parser:
             res.register_advancement()
             self.advance()
 
-        statement = res.register(self.expr())
+        statement = res.register(self.statement())
         if res.error:
             return res
         statements.append(statement)
@@ -112,7 +112,7 @@ class Parser:
 
             if not more_statements:
                 break
-            statement = res.try_register(self.expr())
+            statement = res.try_register(self.statement())
             if not statement:
                 self.reverse(res.to_reverse_count)
                 more_statements = False
@@ -133,7 +133,7 @@ class Parser:
         if res.error:
             return res.failure(InvalidSyntaxError(
                 self.current_tok.pos_start, self.current_tok.pos_end,
-                "Expected 'if', 'for', 'while', int, float, identifier, '+', '-', '(', '[' or 'not'"
+                "Expected 'if', 'for', 'while', int, float, identifier, '+', '-', '(', or 'not'"
             ))
         return res.success(expr)
 
@@ -351,10 +351,8 @@ class Parser:
                         self.current_tok.pos_start, self.current_tok.pos_end,
                         "Expected 'END'"
                     ))
-
-
             else:
-                expr = res.register(self.expr())
+                expr = res.register(self.statement())
                 if res.error:
                     return res
                 else_case = (expr, False)
@@ -423,7 +421,7 @@ class Parser:
                 new_cases, else_case = all_cases
                 cases.extend(new_cases)
         else:
-            expr = res.register(self.expr())
+            expr = res.register(self.statement())
             if res.error:
                 return res
             cases.append((condition, expr, False))
@@ -522,7 +520,7 @@ class Parser:
 
             return res.success(ForNode(var_name, start_value, end_value, step_value, body, True))
 
-        body = res.register(self.expr())
+        body = res.register(self.statement())
         if res.error:
             return res
 
