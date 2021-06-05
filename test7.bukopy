@@ -1,0 +1,5 @@
+num = 50
+if num > 50:
+    print("Cat")
+elif num < 50:
+    print("Dog")

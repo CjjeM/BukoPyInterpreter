@@ -34,7 +34,6 @@ T_GT = 'GT'
 T_LTE = 'LTE'
 T_GTE = 'GTE'
 T_COMMA = 'COMMA'
-T_ARROW = 'ARROW'
 T_EOF = 'EOF'
 T_COLON = ':'
 T_NEWLINE = 'NEWLINE'
@@ -213,10 +212,6 @@ class Lexer:
         tok_type = T_MINUS
         pos_start = self.pos.copy()
         self.advance()
-
-        if self.current_char == '>':
-            self.advance()
-            tok_type = T_ARROW
 
         return Token(tok_type, pos_start=pos_start, pos_end=self.pos)
 

@@ -1,0 +1,4 @@
+OrigPrice = 100
+DiscountPerc = 0.25
+DiscountPrice = 100 - (OrigPrice*DiscountPerc)
+print(DiscountPrice)

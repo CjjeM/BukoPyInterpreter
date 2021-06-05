@@ -62,8 +62,8 @@ class AST:
         arg_nodes = node.arg_nodes
 
         if len(arg_nodes) != 0:
-            return f"Call(Name={self.visit(node_to_call)} Args='{self.visit(arg_nodes[0])}')"
-        return f"Call(Name={self.visit(node_to_call)} Args={None})"
+            return type(node).__name__ + f"(Name={self.visit(node_to_call)} Args='{self.visit(arg_nodes[0])}')"
+        return type(node).__name__ + f"(Name={self.visit(node_to_call)} Args={None})"
 
     def print_ast(self, ast):
         list_node = ast.node

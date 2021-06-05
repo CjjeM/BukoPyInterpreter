@@ -1,0 +1,2 @@
+prnt = 1+1
+prnt("testing")
